@@ -521,7 +521,12 @@ pub fn NonBlocking(comptime S: type, comptime WSH: type) type {
                 return;
             };
             ready_sem.post(io);
-            defer self.websocket.shutdown();
+            // Stop the worker thread pool before shutting down websocket
+            // connections so in-flight cleanup cannot race with shutdownList().
+            defer {
+                self.thread_pool.stop();
+                self.websocket.shutdown();
+            }
 
             var now = timestamp(io);
             var last_timeout = now;
